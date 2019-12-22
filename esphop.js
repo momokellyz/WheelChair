@@ -202,6 +202,8 @@ function cripple_window(_window) {
             let isCloseEnough = function(player) {let distance = calcDistanceTo(player); return me.weapon.range >= distance && ("Shotgun" != me.weapon.name || distance < 70) && ("Akimbo Uzi" != me.weapon.name || distance < 100);};
             let haveAmmo = function() {return !(me[ammos][me[weaponIndex]] !== undefined && me[ammos][me[weaponIndex]] == 0);};
 			
+			
+			
             // auto reload
 		   controls.keys[controls.reloadKey] = !haveAmmo() * 1;
 	
