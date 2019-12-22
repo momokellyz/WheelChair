@@ -3,9 +3,9 @@ function cripple_window(_window) {
     if (!_window) {
         return;
     }
- 
+
     let shared_state = new Map(Object.entries({safe_windows: new WeakMap(), functions_to_hide: new WeakMap(), functions_to_hide_rev: new WeakMap(), strings_to_hide: [], hidden_globals: [], init: false}));
- 
+
     let invisible_define = function(obj, key, value) {
         shared_state.get('hidden_globals').push(key);
         Object.defineProperty(obj, key, {
@@ -15,29 +15,29 @@ function cripple_window(_window) {
             value: value
         });
     };
- 
+
     const master_key = 'ttap#4547';
     if (!_window.top[master_key]) {
         invisible_define(_window.top, master_key, shared_state);
     } else {
         shared_state = _window.top[master_key];
     }
- 
+
     shared_state.get('safe_windows').set(_window, window);
- 
+
     String.prototype.regexify = function() {
         return new RegExp(this.replace(/([\[|\]|\(|\)|\*|\\|\.|\+])/g,'\\$1'), 'g');
     }
- 
+
     let conceal_function = function(original_Function, hook_Function) {
         shared_state.get('functions_to_hide').set(hook_Function, original_Function);
         shared_state.get('functions_to_hide_rev').set(original_Function, hook_Function);
     };
- 
+
     let conceal_string = function(original_string, hook_string) {
         shared_state.get('strings_to_hide').push({from: hook_string.regexify(), to: original_string});
     };
- 
+
     const original_Function_toString = _window.Function.prototype.toString;
     let hook_Function_toString = new _window.Proxy(original_Function_toString, {
         apply: function(target, _this, _arguments) {
@@ -51,7 +51,7 @@ function cripple_window(_window) {
                 e.stack = e.stack.replace(/\n.*Object\.apply.*/, '');
                 throw e;
             }
- 
+
             shared_state.get('strings_to_hide').forEach(function(map) {
                 ret = ret.replace(map.from, map.to);
             });
@@ -60,7 +60,7 @@ function cripple_window(_window) {
     });
     _window.Function.prototype.toString = hook_Function_toString;
     conceal_function(original_Function_toString, hook_Function_toString);
- 
+
     const original_getOwnPropertyDescriptors = _window.Object.getOwnPropertyDescriptors;
     let hook_getOwnPropertyDescriptors = new _window.Proxy(original_getOwnPropertyDescriptors, {
         apply: function(target, _this, _arguments) {
@@ -78,7 +78,7 @@ function cripple_window(_window) {
     });
     _window.Object.getOwnPropertyDescriptors = hook_getOwnPropertyDescriptors;
     conceal_function(original_getOwnPropertyDescriptors, hook_getOwnPropertyDescriptors);
- 
+
     const original_getOwnPropertyNames = _window.Object.getOwnPropertyNames;
     let hook_getOwnPropertyNames = new _window.Proxy(original_getOwnPropertyNames, {
         apply: function(target, _this, _arguments) {
@@ -99,7 +99,7 @@ function cripple_window(_window) {
     });
     _window.Object.getOwnPropertyNames = hook_getOwnPropertyNames;
     conceal_function(original_getOwnPropertyNames, hook_getOwnPropertyNames);
- 
+
     const original_ownKeys = _window.Reflect.ownKeys;
     let hook_ownKeys = new _window.Proxy(original_ownKeys, {
         apply: function(target, _this, _arguments) {
@@ -120,10 +120,10 @@ function cripple_window(_window) {
     });
     _window.Reflect.ownKeys = hook_ownKeys;
     conceal_function(original_ownKeys, hook_ownKeys);
- 
+
     let drawVisuals = function() {};
     const original_clearRect = _window.CanvasRenderingContext2D.prototype.clearRect;
-    const original_save = _window.CanvasRenderingContext2D.prototype.save;
+    const original_save = _window.CanvasRenderingContext2D.prototype.save; 
     const original_scale = _window.CanvasRenderingContext2D.prototype.scale;    
     const original_beginPath = _window.CanvasRenderingContext2D.prototype.beginPath;    
     const original_moveTo = _window.CanvasRenderingContext2D.prototype.moveTo;  
@@ -147,7 +147,7 @@ function cripple_window(_window) {
     });
     _window.CanvasRenderingContext2D.prototype.clearRect = hook_clearRect;
     conceal_function(original_clearRect, hook_clearRect);
- 
+
     if (!shared_state.get('hrt')) {
         shared_state.set('hrt', function(me, inputs, world, consts, math) {
             /******************************************************/
@@ -162,7 +162,7 @@ function cripple_window(_window) {
             controls[scrollDelta] = 0;
             controls[wSwap] = 0;
             /******************************************************/
- 
+
             const playerHeight = 11;
             const crouchDst = 3;
             const headScale = 2;
@@ -187,7 +187,7 @@ function cripple_window(_window) {
                 let g = Math.abs(b - e), h = getD3D(a, b, c, d, e, f);
                 return Math.asin(g / h) * (b > e ? -1 : 1);
             };
- 
+
             let dAngleTo = function(x, y, z) {
                 let ty = normaliseYaw(getDir(controls.object.position.z, controls.object.position.x, z, x));
                 let tx = getXDire(controls.object.position.x, controls.object.position.y, controls.object.position.z, x, y, z);
@@ -201,9 +201,57 @@ function cripple_window(_window) {
             let calcDistanceTo = function(player) {return getD3D(player.x3, player.y3, player.z3, me.x, me.y, me.z)};
             let isCloseEnough = function(player) {let distance = calcDistanceTo(player); return me.weapon.range >= distance && ("Shotgun" != me.weapon.name || distance < 70) && ("Akimbo Uzi" != me.weapon.name || distance < 100);};
             let haveAmmo = function() {return !(me[ammos][me[weaponIndex]] !== undefined && me[ammos][me[weaponIndex]] == 0);};
-			
-			
-			
+
+            // target selector - based on closest to aim
+            let closest = null, closestAngle = Infinity;
+            let players = world.players.list;
+            for (let i = 0; me.active && i < players.length; i++) {
+                let e = players[i];
+                if (e[isYou] || !e.active || !e[objInstances] || !isEnemy(e)) {
+                    continue;
+                }
+
+                // experimental prediction removed
+                e.x3 = e.x;
+                e.y3 = e.y;
+                e.z3 = e.z;
+
+                if (!isCloseEnough(e) || !canHit(e)) {
+                    continue;
+                }
+
+                let angle = calcAngleTo(e);
+                if (angle < closestAngle) {
+                    closestAngle = angle;
+                    closest = e;
+                }
+            }
+            // aimbot
+            let ty = controls.object.rotation.y, tx = controls[pchObjc].rotation.x;
+            if (closest) {
+                let target = closest;
+                let y = target.y3 + playerHeight - (headScale/* + hitBoxPad*/) / 2 - target.crouchVal * crouchDst;
+                if (me.weapon[nAuto] && me[didShoot]) {
+                    inputs[SHOOT] = 0;
+                } else if (!me.aimVal) {
+                    inputs[SHOOT] = 1;
+                    inputs[SCOPE] = 1;
+                } else {
+                    inputs[SCOPE] = 1;
+                }
+
+                ty = getDir(controls.object.position.z, controls.object.position.x, target.z3, target.x3);
+                tx = getXDire(controls.object.position.x, controls.object.position.y, controls.object.position.z, target.x3, y, target.z3);
+
+                // perfect recoil control
+                tx -= .3 * me[recoilAnimY];
+            } else {
+                inputs[SHOOT] = controls[mouseDownL];
+                inputs[SCOPE] = controls[mouseDownR];
+            }
+
+
+				
             // auto reload
 		controls.keys[controls.reloadKey] = !haveAmmo() * 1;
 	
