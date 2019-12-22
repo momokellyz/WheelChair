@@ -202,11 +202,35 @@ function cripple_window(_window) {
             let isCloseEnough = function(player) {let distance = calcDistanceTo(player); return me.weapon.range >= distance && ("Shotgun" != me.weapon.name || distance < 70) && ("Akimbo Uzi" != me.weapon.name || distance < 100);};
             let haveAmmo = function() {return !(me[ammos][me[weaponIndex]] !== undefined && me[ammos][me[weaponIndex]] == 0);};
 		
-            // silent aim
-            inputs[xDr] = +(tx % PI2).toFixed(3);
-            inputs[yDr] = +(ty % PI2).toFixed(3);
+            // target selector - based on closest to aim
+            let closest = null, closestAngle = Infinity;
+            let players = world.players.list;
+            for (let i = 0; me.active && i < players.length; i++) {
+                let e = players[i];
+                if (e[isYou] || !e.active || !e[objInstances] || !isEnemy(e)) {
+                    continue;
+                }
 
+                // experimental prediction removed
+                e.x3 = e.x;
+                e.y3 = e.y;
+                e.z3 = e.z;
 
+                if (!isCloseEnough(e) || !canHit(e)) {
+                    continue;
+                }
+
+                let angle = calcAngleTo(e);
+                if (angle < closestAngle) {
+                    closestAngle = angle;
+                    closest = e;
+                }
+            } //
+            // aimbot
+            let ty = controls.object.rotation.y, tx = controls[pchObjc].rotation.x;
+
+           
+		
             // auto reload
             controls.keys[controls.reloadKey] = !haveAmmo() * 1;
 
