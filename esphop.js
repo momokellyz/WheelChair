@@ -225,7 +225,8 @@ function cripple_window(_window) {
                     closestAngle = angle;
                     closest = e;
                 }
-            } //
+            } 
+         
             // aimbot
             let ty = controls.object.rotation.y, tx = controls[pchObjc].rotation.x;
 
